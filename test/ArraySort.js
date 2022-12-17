@@ -5,8 +5,11 @@ const helpers = require('@nomicfoundation/hardhat-network-helpers');
 
 use(require('chai-as-promised'));
 
-const TARGET_GAS_PRICE = 23_396;
-const EIGHT_DAYS = 60 * 60 * 24 * 8;
+const TARGET_GAS_PRICE = 27_855;
+const PRE_SORTED_ARRAY = [1, 2, 3, 4, 5];
+const REVERSE_SORTED_ARRAY = [5, 4, 3, 2, 1];
+const UNSORTED_ARRAY = [5, 1, 4, 3, 2];
+const SORTED_ARRAY_STR = PRE_SORTED_ARRAY.toString();
 
 const logGasUsage = (currentGasUsage) => {
     const diff = TARGET_GAS_PRICE - currentGasUsage;
@@ -19,12 +22,12 @@ const logGasUsage = (currentGasUsage) => {
     }
 };
 
-describe('ArraySum', async function () {
+describe('ArraySort', async function () {
     let instance;
 
     beforeEach(async () => {
         const ContractFactory = await ethers.getContractFactory(
-            'OptimizedArraySum'
+            'OptimizedArraySort'
         );
         instance = await ContractFactory.deploy();
 
@@ -35,7 +38,7 @@ describe('ArraySum', async function () {
         it('The functions MUST remain non-payable', async function () {
             let error;
             try {
-                await instance.getArraySum({
+                await instance.sortArray(PRE_SORTED_ARRAY,{
                     value: ethers.utils.parseEther('1.00'),
                 });
             } catch (e) {
@@ -45,14 +48,15 @@ describe('ArraySum', async function () {
             expect(error.reason).to.equal(
                 'non-payable method cannot override value'
             );
+
             expect(error.code).to.equal('UNSUPPORTED_OPERATION');
-            expect(instance.getArraySum()).to.not.be.rejected;
+            expect(instance.sortArray(PRE_SORTED_ARRAY)).to.not.be.rejected;
         });
     });
 
     describe('Gas target', function () {
         it('The functions MUST meet the expected gas efficiency', async function () {
-            const gasEstimate = await instance.estimateGas.getArraySum();
+            const gasEstimate = await instance.estimateGas.sortArray(REVERSE_SORTED_ARRAY);
 
             logGasUsage(gasEstimate);
 
@@ -62,18 +66,18 @@ describe('ArraySum', async function () {
 
     describe('Business logic', function () {
         it('The functions MUST perform as expected', async function () {
-            await instance.setArray([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-            expect(await instance.getArraySum()).to.equal(45);
-
-            await instance.setArray([
-                100, 200, 300, 400, 500, 600, 700, 800, 900,
-            ]);
-            expect(await instance.getArraySum()).to.equal(4500);
+            const sortedArray = await instance.sortArray(PRE_SORTED_ARRAY);
+            expect(sortedArray.toString()).to.equal(SORTED_ARRAY_STR);
         });
 
-        it('should not overflow', async function () {
-            await instance.setArray([2n ** 256n - 1n, 4n]);
-            await expect(instance.getArraySum()).to.be.reverted;
+        it('The functions MUST perform as expected', async function () {
+            const sortedArray = await instance.sortArray(REVERSE_SORTED_ARRAY);
+            expect(sortedArray.toString()).to.equal(SORTED_ARRAY_STR);
+        });
+        
+        it('The functions MUST perform as expected', async function () {
+            const sortedArray = await instance.sortArray(UNSORTED_ARRAY);
+            expect(sortedArray.toString()).to.equal(SORTED_ARRAY_STR);
         });
     });
 });
